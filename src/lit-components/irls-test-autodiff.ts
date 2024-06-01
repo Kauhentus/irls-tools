@@ -2,6 +2,7 @@
 import {LitElement, PropertyValueMap, css, html} from 'lit';
 import {customElement, property, query, state} from 'lit/decorators.js';
 import * as tad from 'tadiff';
+import { IRLSOptimizer, IRLSOptimizerParams, Vector } from '../util/IRLS_optimizer';
 
 export class Box {
     x: number;
@@ -111,151 +112,176 @@ export class Box {
     alignment_y_right_autodiff = (box: Box) => this.alignment_y_t_autodiff(box, 1.0);
 
     compute_constrained_position(other_boxes: Box[]){
-        let position = [this.x, this.y];
+        // let position = [this.x, this.y];
         const IRLS_iters = 50;
-
         const max_dist = 20;
-        const constraints: [number, tad.Expression[], (position: number[]) => boolean][] = [
-            ...other_boxes.map(box => [100.0, (() => {
-                const expr = this.alignment_x_left_autodiff(box);
-                const constraint = tad.parseExpression(expr);
-                const vars = tad.getAllVariables(constraint);
-                const constraint_dx = tad.getDerivativeForExpression(vars["x"], tad.getAllDerivatives(constraint, new tad.Constant(1)));
-                const constraint_dy = tad.getDerivativeForExpression(vars["y"], tad.getAllDerivatives(constraint, new tad.Constant(1)));
-                return [constraint, constraint_dx, constraint_dy];
-            })(), (position: number[]) => {
-                const synthetic_box = box.clone();
-                synthetic_box.x = position[0];
-                synthetic_box.y = position[1];
-                return this.alignment_x_left(box) < max_dist;
-            }] as [number, tad.Expression[], (position: number[]) => boolean]),
 
-            ...other_boxes.map(box => [100.0, (() => {
-                const expr = this.alignment_x_right_autodiff(box);
-                const constraint = tad.parseExpression(expr);
-                const vars = tad.getAllVariables(constraint);
-                const constraint_dx = tad.getDerivativeForExpression(vars["x"], tad.getAllDerivatives(constraint, new tad.Constant(1)));
-                const constraint_dy = tad.getDerivativeForExpression(vars["y"], tad.getAllDerivatives(constraint, new tad.Constant(1)));
-                return [constraint, constraint_dx, constraint_dy];
-            })(), (position: number[]) => {
-                const synthetic_box = box.clone();
-                synthetic_box.x = position[0];
-                synthetic_box.y = position[1];
-                return this.alignment_x_right(box) < max_dist;
-            }] as [number, tad.Expression[], (position: number[]) => boolean]),
+        // const constraints: [number, tad.Expression[], (position: number[]) => boolean][] = [
+        //     ...other_boxes.map(box => [100.0, (() => {
+        //         const expr = this.alignment_x_left_autodiff(box);
+        //         const constraint = tad.parseExpression(expr);
+        //         const vars = tad.getAllVariables(constraint);
+        //         const constraint_dx = tad.getDerivativeForExpression(vars["x"], tad.getAllDerivatives(constraint, new tad.Constant(1)));
+        //         const constraint_dy = tad.getDerivativeForExpression(vars["y"], tad.getAllDerivatives(constraint, new tad.Constant(1)));
+        //         return [constraint, constraint_dx, constraint_dy];
+        //     })(), (position: number[]) => {
+        //         const synthetic_box = box.clone();
+        //         synthetic_box.x = position[0];
+        //         synthetic_box.y = position[1];
+        //         return this.alignment_x_left(box) < max_dist;
+        //     }] as [number, tad.Expression[], (position: number[]) => boolean]),
 
-            ...other_boxes.map(box => [100.0, (() => {
-                const expr = this.alignment_y_left_autodiff(box);
-                const constraint = tad.parseExpression(expr);
-                const vars = tad.getAllVariables(constraint);
-                const constraint_dx = tad.getDerivativeForExpression(vars["x"], tad.getAllDerivatives(constraint, new tad.Constant(1)));
-                const constraint_dy = tad.getDerivativeForExpression(vars["y"], tad.getAllDerivatives(constraint, new tad.Constant(1)));
-                return [constraint, constraint_dx, constraint_dy];
-            })(), (position: number[]) => {
-                const synthetic_box = box.clone();
-                synthetic_box.x = position[0];
-                synthetic_box.y = position[1];
-                return this.alignment_y_left(box) < max_dist;
-            }] as [number, tad.Expression[], (position: number[]) => boolean]),
+        //     ...other_boxes.map(box => [100.0, (() => {
+        //         const expr = this.alignment_x_right_autodiff(box);
+        //         const constraint = tad.parseExpression(expr);
+        //         const vars = tad.getAllVariables(constraint);
+        //         const constraint_dx = tad.getDerivativeForExpression(vars["x"], tad.getAllDerivatives(constraint, new tad.Constant(1)));
+        //         const constraint_dy = tad.getDerivativeForExpression(vars["y"], tad.getAllDerivatives(constraint, new tad.Constant(1)));
+        //         return [constraint, constraint_dx, constraint_dy];
+        //     })(), (position: number[]) => {
+        //         const synthetic_box = box.clone();
+        //         synthetic_box.x = position[0];
+        //         synthetic_box.y = position[1];
+        //         return this.alignment_x_right(box) < max_dist;
+        //     }] as [number, tad.Expression[], (position: number[]) => boolean]),
 
-            ...other_boxes.map(box => [100.0, (() => {
-                const expr = this.alignment_y_right_autodiff(box);
-                const constraint = tad.parseExpression(expr);
-                const vars = tad.getAllVariables(constraint);
-                const constraint_dx = tad.getDerivativeForExpression(vars["x"], tad.getAllDerivatives(constraint, new tad.Constant(1)));
-                const constraint_dy = tad.getDerivativeForExpression(vars["y"], tad.getAllDerivatives(constraint, new tad.Constant(1)));
-                return [constraint, constraint_dx, constraint_dy];
-            })(), (position: number[]) => {
-                const synthetic_box = box.clone();
-                synthetic_box.x = position[0];
-                synthetic_box.y = position[1];
-                return this.alignment_y_right(box) < max_dist;
-            }] as [number, tad.Expression[], (position: number[]) => boolean]),
-        ];
+        //     ...other_boxes.map(box => [100.0, (() => {
+        //         const expr = this.alignment_y_left_autodiff(box);
+        //         const constraint = tad.parseExpression(expr);
+        //         const vars = tad.getAllVariables(constraint);
+        //         const constraint_dx = tad.getDerivativeForExpression(vars["x"], tad.getAllDerivatives(constraint, new tad.Constant(1)));
+        //         const constraint_dy = tad.getDerivativeForExpression(vars["y"], tad.getAllDerivatives(constraint, new tad.Constant(1)));
+        //         return [constraint, constraint_dx, constraint_dy];
+        //     })(), (position: number[]) => {
+        //         const synthetic_box = box.clone();
+        //         synthetic_box.x = position[0];
+        //         synthetic_box.y = position[1];
+        //         return this.alignment_y_left(box) < max_dist;
+        //     }] as [number, tad.Expression[], (position: number[]) => boolean]),
 
-        const get_state_cost = (position: number[]): [number, number[]] => {
-            let total_cost = 0;
-            let costs: number[] = [];
+        //     ...other_boxes.map(box => [100.0, (() => {
+        //         const expr = this.alignment_y_right_autodiff(box);
+        //         const constraint = tad.parseExpression(expr);
+        //         const vars = tad.getAllVariables(constraint);
+        //         const constraint_dx = tad.getDerivativeForExpression(vars["x"], tad.getAllDerivatives(constraint, new tad.Constant(1)));
+        //         const constraint_dy = tad.getDerivativeForExpression(vars["y"], tad.getAllDerivatives(constraint, new tad.Constant(1)));
+        //         return [constraint, constraint_dx, constraint_dy];
+        //     })(), (position: number[]) => {
+        //         const synthetic_box = box.clone();
+        //         synthetic_box.x = position[0];
+        //         synthetic_box.y = position[1];
+        //         return this.alignment_y_right(box) < max_dist;
+        //     }] as [number, tad.Expression[], (position: number[]) => boolean]),
+        // ];
 
-            constraints.forEach(c_pair => {
-                const constraint_weight = c_pair[0];
-                const eval_context = {
-                    variableValues: {
-                        "x": position[0],
-                        "y": position[1]
-                    }
-                }
-                const current_constraint = c_pair[1][0];
-                const constraint_cost = current_constraint.evaluate(eval_context);
-                let cost = constraint_weight * constraint_cost;
-                if(constraint_cost === Infinity && constraint_weight === 0) cost = Infinity;
-                if(cost !== Infinity) total_cost += cost;
-                costs.push(cost);
-            });
-            return [total_cost, costs];
-        }
+        // const get_state_cost = (position: number[]): [number, number[]] => {
+        //     let total_cost = 0;
+        //     let costs: number[] = [];
+
+        //     constraints.forEach(c_pair => {
+        //         const constraint_weight = c_pair[0];
+        //         const eval_context = {
+        //             variableValues: {
+        //                 "x": position[0],
+        //                 "y": position[1]
+        //             }
+        //         }
+        //         const current_constraint = c_pair[1][0];
+        //         const constraint_cost = current_constraint.evaluate(eval_context);
+        //         let cost = constraint_weight * constraint_cost;
+        //         if(constraint_cost === Infinity && constraint_weight === 0) cost = Infinity;
+        //         if(cost !== Infinity) total_cost += cost;
+        //         costs.push(cost);
+        //     });
+        //     return [total_cost, costs];
+        // }
 
         const start_step = 5;
         const end_step = 1;
-        const step_schedule = [];
-
-        for(let i = 0; i < IRLS_iters; i++){
-            const t = (i / (IRLS_iters - 1)) ** 0.5;
-            const step = start_step * (1 - t) + end_step * t;
-            step_schedule.push(step);
-        }
-        console.log(step_schedule)
-
-        let final_final_costs: number[] = [];
-        for(let i = 0; i < step_schedule.length; i++){
-            // ATTEMPT 2
-            // generate neighbors through grad descent
-            const step = step_schedule[i];
-            let total_dx = 0;
-            let total_dy = 0;
-            constraints.forEach(c => {
-                const weight = c[0];
-                const constraint_dx = c[1][1];
-                const constraint_dy = c[1][2];
-                const use_constraint = c[2](position);
-                if(!use_constraint) return;
-                
-                const eval_context = {
-                    variableValues: {
-                        "x": position[0],
-                        "y": position[1]
-                    }
-                };
-                const dx = constraint_dx.evaluate(eval_context);
-                const dy = constraint_dy.evaluate(eval_context);
-
-                // console.log(constraint.evaluateToString(), dx, dy)
-                // console.log('dx', dx_function.evaluateToString())
-                // console.log('dy', dy_function.evaluateToString())
-                // console.log(position);
-
-                total_dx += dx * weight ** 2;
-                total_dy += dy * weight ** 2;
-            });
-            let grad_magnitude = Math.sqrt(total_dx ** 2 + total_dy ** 2);
-            if(grad_magnitude !== 0){
-                position[0] += -step * total_dx / grad_magnitude;
-                position[1] += -step * total_dy / grad_magnitude;
+        const params: IRLSOptimizerParams = {
+            initial_state: [this.x, this.y],
+            num_iterations: IRLS_iters,
+            weight_epsilon: 1,
+            dimension: 2,
+            step_scheduler: (i: number, total_iters: number) => {
+                const t = (i / (total_iters - 1)) ** 0.5;
+                return start_step * (1 - t) + end_step * t;
             }
-
-            // update weights for IRLS
-            const final_costs = get_state_cost(position)[1];
-            final_final_costs = final_costs;
-            constraints.map((c_pair, i) => {
-                c_pair[0] = 1 / (1 + final_costs[i]);
-            });
+        };
+        type MemoAutodiff = {
+            constraint: tad.Expression;
+            constraint_derivatives: tad.Expression[];
         }
-        
-        console.log('final weights:', constraints.map(c_pair => c_pair[0]))
-        console.log('final costs:', final_final_costs, '\n')
+        const optimizer = new IRLSOptimizer<MemoAutodiff>(params);
 
-        this.x_c = position[0];
-        this.y_c = position[1];
+        const create_geometric_constraint = (
+            box: Box,
+            auto_diff_expression: (box: Box) => string,
+            constraint_cost_test: (box: Box) => number
+        ) => ({
+            memo: (position: Vector) => {
+                const constraint = tad.parseExpression(auto_diff_expression(box));
+                const vars = tad.getAllVariables(constraint);
+                const constraint_dx = tad.getDerivativeForExpression(vars["x"], tad.getAllDerivatives(constraint, new tad.Constant(1)));
+                const constraint_dy = tad.getDerivativeForExpression(vars["y"], tad.getAllDerivatives(constraint, new tad.Constant(1)));
+                return {
+                    constraint: constraint,
+                    constraint_derivatives: [constraint_dx, constraint_dy]
+                }
+            },
+            use_constraint: (position: Vector) => {
+                const synthetic_box = box.clone();
+                synthetic_box.x = position[0];
+                synthetic_box.y = position[1];
+                return constraint_cost_test(box) < max_dist;
+            },
+            cost: (position: Vector, memo: MemoAutodiff) => {
+                const eval_context = {variableValues: {"x": position[0], "y": position[1]}}
+                return memo.constraint.evaluate(eval_context);
+            },
+            gradient: (position: Vector, memo: MemoAutodiff) => {
+                const eval_context = {variableValues: {"x": position[0], "y": position[1]}}
+                return memo.constraint_derivatives.map(d => d.evaluate(eval_context));
+            },
+        });
+
+        other_boxes.forEach(box => {
+            optimizer.add_constraint(1.0, {
+                memo: (position: Vector) => {
+                    const constraint = tad.parseExpression(this.alignment_x_left_autodiff(box));
+                    const vars = tad.getAllVariables(constraint);
+                    const constraint_dx = tad.getDerivativeForExpression(vars["x"], tad.getAllDerivatives(constraint, new tad.Constant(1)));
+                    const constraint_dy = tad.getDerivativeForExpression(vars["y"], tad.getAllDerivatives(constraint, new tad.Constant(1)));
+                    return {
+                        constraint: constraint,
+                        constraint_derivatives: [constraint_dx, constraint_dy]
+                    }
+                },
+                use_constraint: (position: Vector) => {
+                    const synthetic_box = box.clone();
+                    synthetic_box.x = position[0];
+                    synthetic_box.y = position[1];
+                    return this.alignment_x_left(box) < max_dist;
+                },
+                cost: (position: Vector, memo: MemoAutodiff) => {
+                    const eval_context = {variableValues: {"x": position[0], "y": position[1]}}
+                    return memo.constraint.evaluate(eval_context);
+                },
+                gradient: (position: Vector, memo: MemoAutodiff) => {
+                    const eval_context = {variableValues: {"x": position[0], "y": position[1]}}
+                    return memo.constraint_derivatives.map(d => d.evaluate(eval_context));
+                },
+            })
+        });
+
+
+        let result = optimizer.optimize();
+        
+        // console.log('final weights:', optimizer.weights, '\n');
+        // console.log('final costs:', final_final_costs, '\n')
+
+        this.x_c = result[0];
+        this.y_c = result[1];
         this.has_constrained_position = true;
     }
 }
