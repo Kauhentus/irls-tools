@@ -17,3 +17,8 @@ export const magnitude = (a: number[]) => {
 export const cosine_similarity = (a: number[], b: number[]) => {
     return dot_product(a, b) / (magnitude(a) * magnitude(b));
 }
+
+export const normalize = (a: number[]) => {
+    let m = magnitude(a);
+    return a.map(n => n / m);
+};
