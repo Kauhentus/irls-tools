@@ -25,26 +25,37 @@ export class IRLSOptimizer<T> {
     state: Vector;
 
     weights: number[];
+    constraint_metadata: any[];
     constraints: IRLSConstraint<T>[];
     memo: T[];
+
+    history_state: Vector[];
+    history_weights: number[][];
 
     constructor(params: IRLSOptimizerParams){
         this.params = params;
         this.state = params.initial_state;
 
         this.weights = [];
+        this.constraint_metadata = [];
         this.constraints = [];
         this.memo = [];
+
+        this.history_state = [];
+        this.history_weights = [];
     }
 
-    add_constraint(weight: number, constraint: IRLSConstraint<T>){
+    add_constraint(weight: number, constraint: IRLSConstraint<T>, metadata?: any){
         this.weights.push(weight);
         this.constraints.push(constraint);
         this.memo.push(constraint.memo(this.state));
+        this.constraint_metadata.push(metadata);
     }
 
     optimize(){
         let state = this.state;
+        this.history_state = [[...state]];
+        this.history_weights = [[...this.weights]]
 
         for(let i = 0; i < this.params.num_iterations; i++){
             let step = this.params.step_scheduler(i, this.params.num_iterations);
@@ -86,6 +97,8 @@ export class IRLSOptimizer<T> {
             }
             // console.log(prev_state, '->', state, -step * total_grad[0] / total_grad_magnitude)
             // console.log('')
+            this.history_state.push([...state]);
+            this.history_weights.push([...this.weights]);
         }
 
         let active_constraints: IRLSConstraint<T>[] = [];
